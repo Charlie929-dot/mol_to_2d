@@ -1,341 +1,782 @@
 <!DOCTYPE html>
+
 <html lang="zh">
 
+
+
 <head>
+
     <meta charset="UTF-8">
-    <title>Word Molfile 批量图片生成器</title>
+
+    <title>Word/Excel Molfile 批量图片生成器</title>
+
     <!-- 依赖 1: Mammoth.js 用于解析 .docx 文件 -->
-    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.7.0/mammoth.browser.min.js"></script>
+
+    <script src="./lib/mammoth.browser.min.js"></script>
+
     <!-- 依赖 2: Indigo-Ketcher 用于生成化学结构图 (本地路径) -->
+
     <script src="./lib/indigo-ketcher.js"></script>
-    <!-- 新增依赖 3: JSZip 用于打包下载图片 -->
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+    <!-- 依赖 3: JSZip 用于打包下载图片 -->
+
+    <script src="./lib/jszip.min.js"></script>
+
+    <!-- NEW/MODIFIED SECTION: 新增依赖 4: SheetJS (xlsx.js) 用于解析 Excel 文件 -->
+
+    <script src="./lib/xlsx.full.min.js"></script>
+
+
+
 
 
     <style>
+
         body {
+
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
             margin: 20px;
+
             background-color: #f4f7f9;
+
             color: #333;
+
         }
+
+
 
         .container {
+
             max-width: 1200px;
+
             margin: 0 auto;
+
             background: #fff;
+
             padding: 20px 30px;
+
             border-radius: 8px;
+
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
         }
+
+
 
         h1 {
+
             text-align: center;
+
             color: #2c3e50;
+
         }
+
+
 
         .upload-section {
+
             display: flex;
+
             flex-wrap: wrap; /* 允许换行 */
+
             gap: 15px;
+
             align-items: center;
+
             padding: 20px;
+
             border: 2px dashed #ccc;
+
             border-radius: 8px;
+
             background-color: #fafafa;
+
             margin-bottom: 25px;
+
         }
+
+
+
+        .input-controls {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+            flex-wrap: wrap;
+
+        }
+
+
 
         .download-controls {
+
             display: flex;
+
             align-items: center;
+
             gap: 10px;
+
             flex-wrap: wrap;
+
         }
+
+
 
         input[type="file"] {
+
             flex-grow: 1;
+
         }
+
+
 
         button {
+
             padding: 10px 25px;
+
             font-size: 16px;
+
             cursor: pointer;
+
             border: none;
+
             border-radius: 5px;
+
             transition: background-color 0.2s;
+
             color: white;
+
         }
+
+
 
         #process-btn {
+
              background-color: #007bff;
+
         }
+
+
 
         #process-btn:hover {
+
             background-color: #0056b3;
+
         }
+
+
 
         /* 下载按钮样式 */
+
         #download-btn {
+
             background-color: #28a745; /* 绿色 */
+
             display: none; /* 默认隐藏 */
+
         }
+
+
 
         #download-btn:hover {
+
             background-color: #218838;
+
         }
+
+
 
         button:disabled {
+
             background-color: #aaa;
+
             cursor: not-allowed;
+
         }
+
+
 
         #status-message {
+
             text-align: center;
+
             padding: 15px;
+
             margin-top: 20px;
+
             border-radius: 5px;
+
             font-weight: bold;
+
             display: none; /* 初始隐藏 */
+
         }
 
+
+
         .status-info { background-color: #e0f7ff; color: #007bff; }
+
         .status-success { background-color: #e8f5e9; color: #4caf50; }
+
         .status-error { background-color: #ffebee; color: #f44336; }
 
 
+
+
+
         #image-gallery {
+
             margin-top: 20px;
+
             display: grid;
+
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+
             gap: 20px;
+
         }
+
+
 
         .image-card {
+
             border: 1px solid #ddd;
+
             border-radius: 8px;
+
             padding: 10px;
+
             text-align: center;
+
             background-color: #fdfdfd;
+
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+
             display: flex;
+
             flex-direction: column;
+
             justify-content: space-between;
+
         }
+
+
 
         .image-card h4 {
+
             margin: 0 0 10px 0;
+
             font-size: 14px;
+
             color: #555;
+
         }
+
+
 
         .image-card img {
+
             max-width: 100%;
+
             height: auto;
+
             display: block;
+
             margin-bottom: 10px;
+
         }
+
+
 
         .image-card .error-text {
+
             color: #d32f2f;
+
             font-family: monospace;
+
             font-size: 12px;
+
             white-space: pre-wrap;
+
             word-break: break-all;
+
         }
+
     </style>
+
 </head>
 
+
+
 <body>
+
     <div class="container">
-        <h1>Word Molfile 批量图片生成器</h1>
-        <p>上传一个包含 "MOL V3000 Text" 列的表格的 .docx 文件，系统将自动提取内容并生成所有化学结构图。</p>
+
+        <!-- NEW/MODIFIED SECTION: Updated Title and Description -->
+
+        <h1>Molfile 批量图片生成器</h1>
+
+        <p>上传一个包含mol file表格的 word 或 excel 文件，系统将自动提取内容并生成所有化学结构图。</p>
+
+
 
         <div class="upload-section">
-            <input type="file" id="fileInput" accept=".docx">
-            <button id="process-btn" onclick="processFile()">上传并生成图片</button>
+
+            <!-- NEW/MODIFIED SECTION: Updated file input to accept Excel files -->
+
+            <input type="file" id="fileInput" accept=".docx,.xlsx,.xls">
+
+            <div class="input-controls">
+
+                <label for="inputFormat">提取字符类型:</label>
+
+                <select id="inputFormat">
+
+                    <option value="MOL Text">MOL V2000 Text</option>
+
+                    <option value="MOL V3000 Text">MOL V3000 Text</option>
+
+                </select>
+
+            </div>
 
             <div class="download-controls">
+
                 <label for="downloadFormat">下载格式:</label>
+
                 <select id="downloadFormat">
+
                     <option value="png">PNG (图片)</option>
+
                     <option value="svg">SVG (矢量图)</option>
+
                 </select>
+
                 <!-- 下载按钮 -->
+
                 <button id="download-btn" onclick="downloadAllImages()">一键下载所有图片</button>
+
             </div>
+
+            <button id="process-btn" onclick="processFile()">上传并生成图片</button>
+
         </div>
+
+
 
         <div id="status-message"></div>
 
+
+
         <div id="image-gallery">
+
             <!-- 生成的图片将在这里显示 -->
+
         </div>
+
     </div>
 
+
+
 <script>
+
 // ===================================================================================
+
 // PART 1: Indigo/Ketcher Web Worker Setup (这部分无需修改)
+
 // ===================================================================================
+
 const Command = { GenerateImageAsBase64: 10 };
+
 const WorkerEvent = { GenerateImageAsBase64: 'generateImageAsBase64' };
 
+
+
 class EventEmitter {
+
     constructor() { this.events = {}; }
+
     addListener(eventName, fn) { this.events[eventName] = this.events[eventName] || []; this.events[eventName].push(fn); }
+
     removeListener(eventName, fn) { if (this.events[eventName]) { this.events[eventName] = this.events[eventName].filter(eventFn => fn !== eventFn); } }
+
     emit(eventName, data) { if (this.events[eventName]) { this.events[eventName].forEach(fn => fn(data)); } }
+
 }
+
+
 
 const workerCodeTemplate = `
+
     importScripts('__INDIGO_URL__');
+
     const module = new Module();
+
     const Command = { GenerateImageAsBase64: 10 };
 
+
+
     function handle(handler, options, messageType, inputData) {
+
         module.then((indigo) => {
+
             const indigoOptions = new indigo.MapStringString();
+
             if (options) {
+
                 for (const [key, value] of Object.entries(options)) {
+
                     if (value == null) continue;
+
                     indigoOptions.set(key, value.toString());
+
                 }
+
             }
+
             let msg;
+
             try {
+
                 const payload = handler(indigo, indigoOptions);
+
                 msg = { type: messageType, payload, hasError: false, inputData };
+
             } catch (error) {
+
                 msg = { type: messageType, hasError: true, error: error.toString(), inputData };
+
             }
+
             self.postMessage(msg);
+
         });
+
     }
+
+
 
     self.onmessage = (e) => {
+
         const message = e.data;
+
         if (message.type === Command.GenerateImageAsBase64) {
+
             const data = message.data;
+
             handle(
+
                 (indigo, indigoOptions) => indigo.render(data.struct, indigoOptions),
+
                 {
+
                     ...data.options,
+
                     'render-output-format': data.outputFormat,
+
                     'render-background-color': data.backgroundColor,
+
                 },
+
                 Command.GenerateImageAsBase64,
+
                 data.struct,
+
             );
+
         } else {
+
             self.postMessage({ hasError: true, error: 'Unsupported command type' });
+
         }
+
     };
+
 `;
 
+
+
 const indigoJsUrl = new URL('./lib/indigo-ketcher.js', window.location.href).href;
+
 const finalWorkerCode = workerCodeTemplate.replace('__INDIGO_URL__', indigoJsUrl);
+
 const blob = new Blob([finalWorkerCode], { type: 'application/javascript' });
+
 const workerUrl = URL.createObjectURL(blob);
+
 const indigoWorker = new Worker(workerUrl);
 
+
+
 class IndigoService {
+
     constructor() {
+
         this.worker = indigoWorker;
+
         this.EE = new EventEmitter();
+
         this.worker.onmessage = (e) => {
+
             const message = e.data;
+
             const event = WorkerEvent.GenerateImageAsBase64;
+
             if (message.type === Command.GenerateImageAsBase64 && event) {
+
                 this.EE.emit(event, { data: message });
+
             }
+
         };
+
     }
 
+
+
     generateImageAsBase64(inputData, options = {}) {
+
         return new Promise((resolve, reject) => {
+
             const requestId = inputData + Date.now();
+
             const action = ({ data: msg }) => {
+
                 if (msg.inputData === inputData) {
+
                     this.EE.removeListener(WorkerEvent.GenerateImageAsBase64, action);
+
                     if (!msg.hasError) {
+
                         resolve(msg.payload);
+
                     } else {
+
                         reject(new Error(msg.error));
+
                     }
+
                 }
+
             };
+
             this.EE.addListener(WorkerEvent.GenerateImageAsBase64, action);
+
             this.worker.postMessage({
+
                 type: Command.GenerateImageAsBase64,
+
                 data: {
+
                     struct: inputData,
+
                     outputFormat: options['render-output-format'] || 'png',
+
                     backgroundColor: options.backgroundColor,
+
                     options: options,
+
                 }
+
             });
+
         });
+
     }
+
 }
+
+
 
 const structService = new IndigoService();
 
+
+
 // ===================================================================================
-// PART 2: DOCX Parsing and Processing Logic (已修改)
+
+// PART 2: File Parsing and Processing Logic (Heavily Modified for Excel Support)
+
 // ===================================================================================
+
+
 
 const processBtn = document.getElementById('process-btn');
+
 const downloadBtn = document.getElementById('download-btn');
-const downloadFormatSelect = document.getElementById('downloadFormat'); // 获取选择框
+
+const downloadFormatSelect = document.getElementById('downloadFormat');
+
+const inputFormatSelect = document.getElementById('inputFormat');
+
 const gallery = document.getElementById('image-gallery');
+
 const statusDiv = document.getElementById('status-message');
 
-// 新增两个全局变量，用于存储原始 molfile 文本和生成结果（用于下载时重新渲染）
+
+
 let globalMolfileList = [];
-let globalDisplayedImageResults = []; // 用于保存显示在页面上的 PNG 结果
+
+let globalDisplayedImageResults = [];
+
+
 
 function showStatus(message, type = 'info') {
+
     statusDiv.textContent = message;
+
     statusDiv.className = `status-${type}`;
+
     statusDiv.style.display = 'block';
+
 }
+
+
+
+// <!-- NEW/MODIFIED SECTION: Main entry point for file processing -->
 
 function processFile() {
+
     const fileInput = document.getElementById('fileInput');
+
     const file = fileInput.files[0];
 
+
+
     if (!file) {
-        showStatus('错误：请先选择一个 .docx 文件。', 'error');
+
+        showStatus('错误：请先选择一个 .docx 或 .xlsx 文件。', 'error');
+
         return;
+
     }
 
+
+
     processBtn.disabled = true;
-    downloadBtn.style.display = 'none'; // 开始处理时隐藏下载按钮
-    showStatus('正在读取和解析 Word 文件...', 'info');
+
+    downloadBtn.style.display = 'none';
+
     gallery.innerHTML = '';
-    globalMolfileList = []; // 清空之前的 molfile 列表
-    globalDisplayedImageResults = []; // 清空之前的显示结果
+
+    globalMolfileList = [];
+
+    globalDisplayedImageResults = [];
+
+
+
+    const fileName = file.name.toLowerCase();
 
     const reader = new FileReader();
-    reader.onload = function(event) {
-        const arrayBuffer = event.target.result;
-        const options = { styleMap: ["p => p { white-space: pre-wrap; }"] };
 
-        mammoth.convertToHtml({ arrayBuffer: arrayBuffer }, options)
-            .then(result => {
-                showStatus('文件解析成功，正在提取 Molfile...', 'info');
-                parseAndGenerateImages(result.value);
-  })
-            .catch(err => {
-                console.error("Mammoth.js error:", err);
-                showStatus(`错误：解析 .docx 文件失败。 ${err.message}`, 'error');
-                processBtn.disabled = false;
-            });
+
+
+    reader.onload = function(event) {
+
+        const arrayBuffer = event.target.result;
+
+
+
+        if (fileName.endsWith('.docx')) {
+
+            showStatus('正在读取和解析 Word 文件...', 'info');
+
+            processWordFile(arrayBuffer);
+
+        } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+
+            showStatus('正在读取和解析 Excel 文件...', 'info');
+
+            processExcelFile(arrayBuffer);
+
+        } else {
+
+            showStatus('错误：不支持的文件类型。请上传 .docx, .xlsx, 或 .xls 文件。', 'error');
+
+            processBtn.disabled = false;
+
+        }
+
     };
+
     reader.readAsArrayBuffer(file);
+
 }
 
-function parseAndExtractMolfiles(html) {
+
+
+// Function to process .docx files
+
+function processWordFile(arrayBuffer) {
+
+    const options = { styleMap: ["p => p { white-space: pre-wrap; }"] };
+
+    mammoth.convertToHtml({ arrayBuffer: arrayBuffer }, options)
+
+        .then(result => {
+
+            showStatus('Word 文件解析成功，正在提取 Molfile...', 'info');
+
+            const molfiles = parseAndExtractMolfilesFromWord(result.value);
+
+            generateImagesFromMolfileList(molfiles);
+
+        })
+
+        .catch(err => {
+
+            console.error("Mammoth.js error:", err);
+
+            showStatus(`错误：解析 .docx 文件失败。 ${err.message}`, 'error');
+
+            processBtn.disabled = false;
+
+        });
+
+}
+
+
+
+// <!-- NEW SECTION: Function to process .xlsx files -->
+
+function processExcelFile(arrayBuffer) {
+
+    try {
+
+        if (typeof XLSX === 'undefined') {
+
+            throw new Error("Excel 解析库 (SheetJS) 未加载。");
+
+        }
+
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+        const molfiles = parseAndExtractMolfilesFromExcel(workbook);
+
+        showStatus('Excel 文件解析成功，正在提取 Molfile...', 'info');
+
+        generateImagesFromMolfileList(molfiles);
+
+    } catch (err) {
+
+        console.error("SheetJS error:", err);
+
+        showStatus(`错误：解析 Excel 文件失败。 ${err.message}`, 'error');
+
+        processBtn.disabled = false;
+
+    }
+
+}
+
+
+
+// ============================ MODIFICATION START ============================
+// Logic to extract molfiles from Word HTML, updated based on the reference file.
+function parseAndExtractMolfilesFromWord(html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const tables = doc.getElementsByTagName('table');
@@ -343,209 +784,412 @@ function parseAndExtractMolfiles(html) {
 
     for (let table of tables) {
         const rows = table.rows;
-        if (rows.length < 2) continue;
+        if (rows.length === 0) continue; // Skip empty tables
 
+        const selectedFormat = inputFormatSelect.value;
         let targetColumnIndex = -1;
-        for (let i = 0; i < rows[0].cells.length; i++) {
-            if (rows[0].cells[i].textContent.trim() === 'MOL V3000 Text') {
+        let startRowIndex = 1; // Assume header row, data starts from index 1
+
+        const firstRowCells = rows[0].cells;
+
+        // Strategy 1: Find column by exact header name from dropdown
+        for (let i = 0; i < firstRowCells.length; i++) {
+            if (firstRowCells[i] && firstRowCells[i].textContent.trim() === selectedFormat) {
                 targetColumnIndex = i;
                 break;
             }
         }
 
-        if (targetColumnIndex === -1) continue;
-
-        for (let j = 1; j < rows.length; j++) {
-          const cell = rows[j].cells[targetColumnIndex];
-          if (!cell) continue;
-          let text = '';
-          function traverse(node) {
-            if (node.nodeType === Node.TEXT_NODE) {
-              text += node.textContent;
-              if (node.textContent.includes('ChemDraw')){
-                text += '\n';
-              }
+        // Strategy 2 (Fallback): If no header found, check for "ChemDraw" in the first row's cells
+        if (targetColumnIndex === -1) {
+            for (let i = 0; i < firstRowCells.length; i++) {
+                if (firstRowCells[i] && firstRowCells[i].textContent.includes('ChemDraw')) {
+                    targetColumnIndex = i;
+                    startRowIndex = 0; // If found, data starts from index 0
+                    break;
+                }
             }
-            if (node.tagName === 'P' || node.tagName === 'BR') {
-              text += '\n';
-            }
-            for (let child of node.childNodes) {
-              traverse(child);
-            }
-          }
-          traverse(cell);
+        }
 
-          const content = text.trim();
-          let finalContent = 'mol_to_2d\n' + content;
-          let startIndex = -1;
-          try{
-            startIndex = content.indexOf('M  V30 BEGIN SGROUP');
-          }catch (e) {}
+        if (targetColumnIndex === -1) continue; // If both strategies fail, skip this table
 
-          if (startIndex !== -1) {
-              const endIndex = content.indexOf('M  V30 END SGROUP');
-              if (endIndex !== -1) {
-                  const actualEndIndex = endIndex + 'M  V30 END SGROUP'.length;
-                  finalContent = 'mol_to_2d\n' + content.slice(0, startIndex - 1) + content.slice(actualEndIndex);
-              }
-          }
-          if (finalContent) {
-            extractedList.push(finalContent);
-          }
+        // Iterate through rows to extract molfile text
+        for (let j = startRowIndex; j < rows.length; j++) {
+            const cell = rows[j].cells[targetColumnIndex];
+            if (!cell) continue;
+
+            let text = '';
+            // Use the traverse function from the reference file to handle newlines correctly
+            function traverse(node) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    text += node.textContent;
+                    if (node.textContent.includes('ChemDraw')) {
+                        text += '\n';
+                    }
+                }
+                if (node.tagName === 'P' || node.tagName === 'BR') {
+                    text += '\n';
+                }
+                for (let child of node.childNodes) {
+                    traverse(child);
+                }
+            }
+            traverse(cell);
+
+            const content = text.trim();
+            if (!content) continue; // Skip empty cells
+
+            let finalContent = 'mol_to_2d\n' + content;
+            let startIndex = -1;
+
+            // Post-processing to remove SGROUP data, as per reference file
+            if (selectedFormat === "MOL Text") { // V2000
+                try {
+                    startIndex = content.indexOf('M  STY');
+                } catch (e) {}
+
+                if (startIndex !== -1) {
+                    const endIndex = content.indexOf('M  END');
+                    if (endIndex !== -1) {
+                        finalContent = 'mol_to_2d\n' + content.slice(0, startIndex - 1) + content.slice(endIndex - 1);
+                    }
+                }
+            }
+            if (selectedFormat === "MOL V3000 Text") {
+                try {
+                    startIndex = content.indexOf('M  V30 BEGIN SGROUP');
+                } catch (e) {}
+
+                if (startIndex !== -1) {
+                    const endIndex = content.indexOf('M  V30 END SGROUP');
+                    if (endIndex !== -1) {
+                        const actualEndIndex = endIndex + 'M  V30 END SGROUP'.length;
+                        finalContent = 'mol_to_2d\n' + content.slice(0, startIndex - 1) + content.slice(actualEndIndex);
+                    }
+                }
+            }
+
+            if (finalContent) {
+                extractedList.push(finalContent);
+            }
         }
     }
     return extractedList;
 }
+// ============================ MODIFICATION END ==============================
 
-async function parseAndGenerateImages(html) {
-    globalMolfileList = parseAndExtractMolfiles(html); // 存储 molfile 列表
+
+
+// <!-- NEW SECTION: Logic to extract molfiles from Excel workbook -->
+
+function parseAndExtractMolfilesFromExcel(workbook) {
+
+    let extractedList = [];
+
+    workbook.SheetNames.forEach(sheetName => {
+
+        const worksheet = workbook.Sheets[sheetName];
+
+        // SheetJS provides a utility to convert sheet to JSON, which is easier to loop through.
+
+        // We will iterate raw cells to get exact content with newlines.
+
+        for (const cellAddress in worksheet) {
+
+            // Skip metadata cells (e.g., '!ref', '!margins')
+
+            if (cellAddress[0] === '!') continue;
+
+
+
+            const cell = worksheet[cellAddress];
+
+            // 'w' property contains the formatted text, which is what we see in Excel.
+
+            const cellText = cell && cell.w ? String(cell.w).trim() : '';
+
+
+
+            if (cellText.includes('ChemDraw')) {
+
+                extractedList.push('mol_to_2d\n' + cellText); // Prefix for Indigo
+
+            }
+
+        }
+
+    });
+
+    return extractedList;
+
+}
+
+
+
+// <!-- NEW/MODIFIED SECTION: A single function to generate images from any list of molfiles -->
+
+async function generateImagesFromMolfileList(molfileList) {
+
+    globalMolfileList = molfileList;
+
+
 
     if (globalMolfileList.length === 0) {
-        showStatus('未在 Word 文件中找到 "MOL V3000 Text" 列或其内容为空。', 'error');
+
+        showStatus('未在文件中找到任何包含 "ChemDraw" 或指定表头的有效 Molfile 数据。', 'error');
+
         processBtn.disabled = false;
+
         return;
+
     }
+
+
 
     showStatus(`提取成功！共找到 ${globalMolfileList.length} 个 Molfile，正在生成图片...`, 'info');
 
-    // 用于页面显示的图片默认是 PNG 格式
+
+
     const renderOptionsForDisplay = {
+
         'render-output-format': 'png',
+
         'render-bond-thickness': 2,
+
         'render-bond-length': 30,
-        'render-stereo-style': 'ext',
-        'render-atom-ids-visible': false,
-        'render-bond-ids-visible': false
+
+        'render-stereo-style': 'ext'
+
     };
 
+
+
     const promises = globalMolfileList.map(molText =>
+
         structService.generateImageAsBase64(molText, renderOptionsForDisplay)
+
     );
 
-    globalDisplayedImageResults = await Promise.allSettled(promises); // 存储页面显示结果
+
+
+    globalDisplayedImageResults = await Promise.allSettled(promises);
 
     let successCount = 0;
+
     gallery.innerHTML = '';
 
+
+
     globalDisplayedImageResults.forEach((result, index) => {
+
         const card = document.createElement('div');
+
         card.className = 'image-card';
+
         let cardContent = `<h4>结构 #${index + 1}</h4>`;
 
+
+
         if (result.status === 'fulfilled') {
+
             const base64Image = result.value;
+
             cardContent += `<img src="data:image/png;base64,${base64Image}" alt="生成的化学结构图 ${index + 1}">`;
+
             successCount++;
+
         } else {
+
             console.error(`生成失败 (结构 #${index + 1}):`, result.reason);
+
             cardContent += `<div class="error-text">图片生成失败:<br>${result.reason.message}</div>`;
+
         }
+
+
 
         card.innerHTML = cardContent;
+
         gallery.appendChild(card);
+
     });
+
+
 
     showStatus(`处理完成！成功生成 ${successCount} 张图片，失败 ${globalMolfileList.length - successCount} 张。`, 'success');
+
     processBtn.disabled = false;
 
-    // 如果有成功生成的图片，则显示下载按钮和格式选择
+
+
     if (successCount > 0) {
+
         downloadBtn.style.display = 'inline-block';
-        downloadFormatSelect.style.display = 'inline-block'; // 显示选择框
-        downloadFormatSelect.closest('.download-controls').style.display = 'flex'; // 确保父容器也显示
+
+        downloadFormatSelect.style.display = 'inline-block';
+
+        downloadFormatSelect.closest('.download-controls').style.display = 'flex';
+
     } else {
-        downloadFormatSelect.closest('.download-controls').style.display = 'none'; // 隐藏父容器
+
+        downloadFormatSelect.closest('.download-controls').style.display = 'none';
+
     }
+
 }
 
+
+
 // ===================================================================================
-// PART 3: Download All Images Logic (更新为支持格式选择)
+
+// PART 3: Download All Images Logic (No changes needed here)
+
 // ===================================================================================
+
 async function downloadAllImages() {
+
     if (typeof JSZip === 'undefined') {
+
         showStatus('错误：下载库 (JSZip) 未加载，请检查网络连接。', 'error');
+
         return;
+
     }
 
-    // 筛选出成功生成图片的 molfile 文本
+
+
     const successfulMolfileTexts = [];
+
     globalDisplayedImageResults.forEach((result, index) => {
+
         if (result.status === 'fulfilled') {
+
             successfulMolfileTexts.push(globalMolfileList[index]);
+
         }
+
     });
 
+
+
     if (successfulMolfileTexts.length === 0) {
+
         showStatus('没有可供下载的图片。', 'info');
+
         return;
+
     }
 
-    const selectedFormat = downloadFormatSelect.value; // 获取用户选择的格式
-    const fileExtension = selectedFormat; // 文件扩展名，如 'png' 或 'svg'
+
+
+    const selectedFormat = downloadFormatSelect.value;
+
+    const fileExtension = selectedFormat;
+
+
 
     downloadBtn.disabled = true;
+
     downloadBtn.textContent = `正在打包 ${selectedFormat.toUpperCase()}...`;
+
     showStatus(`正在打包 ${successfulMolfileTexts.length} 张 ${selectedFormat.toUpperCase()} 图片，请稍候...`, 'info');
+
+
 
     const zip = new JSZip();
 
-    // 重新设置渲染选项，使用用户选择的格式
+
+
     const renderOptionsForDownload = {
+
         'render-output-format': selectedFormat,
+
         'render-bond-thickness': 2,
+
         'render-bond-length': 30,
-        'render-stereo-style': 'ext',
-        'render-atom-ids-visible': false,
-        'render-bond-ids-visible': false
+
+        'render-stereo-style': 'ext'
+
     };
 
-    // 为每个成功的 molfile 重新生成图片，使用选择的格式
+
+
     const downloadPromises = successfulMolfileTexts.map(molText =>
+
         structService.generateImageAsBase64(molText, renderOptionsForDownload)
+
     );
+
+
 
     const downloadedImageResults = await Promise.allSettled(downloadPromises);
 
     let downloadCount = 0;
+
+
+
     downloadedImageResults.forEach((result, index) => {
+
         if (result.status === 'fulfilled') {
+
             const base64Data = result.value;
-            // 确保文件名是干净的，并且使用正确的文件扩展名
+
             const fileName = `structure_${index + 1}.${fileExtension}`;
+
             zip.file(fileName, base64Data, { base64: true });
+
             downloadCount++;
+
         } else {
+
             console.warn(`生成 ${selectedFormat.toUpperCase()} 格式图片失败 (结构 #${index + 1}):`, result.reason);
-            // 可以在这里选择是否给用户显示更详细的失败信息
+
         }
+
     });
 
+
+
     try {
+
         const content = await zip.generateAsync({ type: 'blob' });
 
-        // 创建一个临时的 a 标签来触发下载
         const link = document.createElement('a');
+
         link.href = URL.createObjectURL(content);
-        link.download = `generated_structures_${selectedFormat}.zip`; // zip 文件名也带上格式
+
+        link.download = `generated_structures_${selectedFormat}.zip`;
+
         document.body.appendChild(link);
+
         link.click();
 
-        // 清理
         document.body.removeChild(link);
+
         URL.revokeObjectURL(link.href);
 
         showStatus(`已成功开始下载 ${downloadCount} 张 ${selectedFormat.toUpperCase()} 图片的 ZIP 文件。`, 'success');
+
     } catch (err) {
+
         console.error("Zipping error:", err);
+
         showStatus(`错误：打包文件失败。${err.message}`, 'error');
+
     } finally {
-        // 无论成功或失败，都恢复按钮状态
+
         downloadBtn.disabled = false;
+
         downloadBtn.textContent = '一键下载所有图片';
+
     }
+
 }
+
+
 
 </script>
 
 </body>
+
 </html>
